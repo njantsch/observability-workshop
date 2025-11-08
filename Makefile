@@ -6,7 +6,7 @@
 # 2. Run in two different terminals:
 #    - Terminal 1: 'make run-backend-local'
 #    - Terminal 2: 'make run-frontend-local'
-# 3. Run 'make stop-local' to stop Redis.
+# 3. Run 'make clean' to stop Redis and remove binaries.
 #
 # SKE usage:
 # 1. Run 'make docker-login' to log into the STACKIT Container Registry.
