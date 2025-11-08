@@ -67,6 +67,7 @@ spec:
   type: LoadBalancer
   ports:
   - port: 80
+    name: http
     targetPort: 8080
   - port: 9090
     name: metrics
