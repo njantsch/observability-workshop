@@ -27,7 +27,7 @@ func generateHandler(w http.ResponseWriter, r *http.Request) {
 		// TODO: Replace log.Printf with slog.Error
 		// Old log: log.Printf("ERROR: couldn't read request body: %v", err)
 		//
-		// (Your code goes here)
+		logger.Error("Could not read request body", "error", err)
 		//
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
@@ -40,7 +40,7 @@ func generateHandler(w http.ResponseWriter, r *http.Request) {
 		// TODO: Replace log.Printf with slog.Error
 		// Old log: log.Printf("ERROR: Redis Set failed: %v", err)
 		//
-		// (Your code goes here)
+		logger.Error("Redis SET failed", "error", err)
 		//
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -49,7 +49,7 @@ func generateHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: Replace log.Printf with slog.Error
 	// Old log: log.Printf("INFO: Mapping created: %s -> %s", shortLink, string(longURL))
 	//
-	// (Your code goes here)
+	logger.Info("Mapping created", "short_link", shortLink, "long_url", string(longURL))
 	//
 	w.Write([]byte(shortLink))
 }
@@ -63,7 +63,7 @@ func resolveHandler(w http.ResponseWriter, r *http.Request) {
 		// TODO: Replace log.Printf with slog.Error
 		// Old log: log.Printf("WARN: Link not found: %s", shortLink)
 		//
-		// (Your code goes here)
+		logger.Warn("Link not found", "short_link", shortLink)
 		//
 		http.NotFound(w, r)
 		return
@@ -71,7 +71,7 @@ func resolveHandler(w http.ResponseWriter, r *http.Request) {
 		// TODO: Replace log.Printf with slog.Error
 		// Old log: log.Printf("ERROR: Redis Get failed: %v", err)
 		//
-		// (Your code goes here)
+		logger.Error("Redis GET failed", "error", err)
 		//
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
@@ -88,7 +88,7 @@ func main() {
 	// 2. Create a `slog.New` logger using this handler.
 	// 3. Add a permanent attribute: .With("service", "backend-app")
 	//
-	// (Your code goes here)
+	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "backend-app")
 	//
 
 	redisAddr := os.Getenv("REDIS_ADDR")
@@ -102,7 +102,7 @@ func main() {
 	// TODO: Replace log.Printf with slog.Info
 	// Old log: log.Printf("INFO: Connecting with Redis on %s", redisAddr)
 	//
-	// (Your code here)
+	logger.Info("Connecting to Redis", "address", redisAddr)
 	//
 
 	r := mux.NewRouter()
@@ -112,7 +112,7 @@ func main() {
 	// TODO: Replace log.Printf with slog.Info
 	// Old log: log.Println("INFO: Backend-Service starting on Port 8081")
 	//
-	// (Your code goes here)
+	logger.Info("Backend service starting", "port", 8081)
 	//
 	http.ListenAndServe(":8081", r)
 }
