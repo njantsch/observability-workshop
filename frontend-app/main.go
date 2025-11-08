@@ -3,7 +3,7 @@ package main
 import (
 	"bytes"
 	"io"
-	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strconv"
@@ -18,9 +18,11 @@ var (
 	backendServiceURL string
 	teamName          string
 
-	// Define metric variables globally
 	httpRequestsTotal   *prometheus.CounterVec
 	httpRequestDuration *prometheus.HistogramVec
+
+	// Define global logger
+	logger *slog.Logger
 )
 
 func init() {
@@ -28,15 +30,18 @@ func init() {
 	if teamName == "" {
 		teamName = "team-unknown"
 	}
-	log.Printf("INFO: Initializing metrics for team: %s", teamName)
 
 	// TODO:
-	// Create the `httpRequestsTotal` CounterVec.
-	// - Name: "http_requests_total"
-	// - Help: "Total number of HTTP requests."
-	// - ConstLabels: prometheus.Labels{"team": teamName}
-	// - Labels: "method", "path", "code"
+	// Initialize the `logger` variable.
+	// 1. Create a `slog.NewJSONHandler` (writing to `os.Stdout`).
+	// 2. Create a `slog.New` logger using this handler.
+	// 3. Add a permanent attribute: .With("service", "frontend-app")
 	//
+	// (Your code goes here)
+	//
+
+	logger.Info("Initializing metrics...")
+
 	httpRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
 			Name:        "http_requests_total",
@@ -46,12 +51,6 @@ func init() {
 		[]string{"method", "path", "code"},
 	)
 
-	// Create the `httpRequestDuration` HistogramVec.
-	// - Name: "http_request_duration_seconds"
-	// - Help: "HTTP request duration in seconds."
-	// - ConstLabels: prometheus.Labels{"team": teamName}
-	// - Labels: "method", "path"
-	//
 	httpRequestDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:        "http_request_duration_seconds",
@@ -62,19 +61,12 @@ func init() {
 		[]string{"method", "path"},
 	)
 
-	log.Println("INFO: Registering metrics...")
-	// TODO:
-	// Register both metrics with Prometheus.
-	//
+	logger.Info("Registering metrics...")
 	prometheus.MustRegister(httpRequestsTotal)
 	prometheus.MustRegister(httpRequestDuration)
-	//
-	log.Println("INFO: Metrics successfully registered.")
+	logger.Info("Metrics successfully registered.")
 }
 
-// responseWriter is a wrapper for http.ResponseWriter,
-// allowing us to capture the status code.
-// (This struct is provided for you. No changes needed.)
 type responseWriter struct {
 	http.ResponseWriter
 	statusCode int
@@ -89,37 +81,20 @@ func (rw *responseWriter) WriteHeader(code int) {
 	rw.ResponseWriter.WriteHeader(code)
 }
 
-// prometheusMiddleware is our middleware that instruments every request.
 func prometheusMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		rw := newResponseWriter(w)
-
-		// Call the next handler in the chain
 		next.ServeHTTP(rw, r)
-
-		//Record metrics after the request has been handled
 		duration := time.Since(start).Seconds()
-
-		// Get the route (e.g., "/shorten" or "/{shortlink}")
 		route := mux.CurrentRoute(r)
 		path, _ := route.GetPathTemplate()
 		if path == "" {
 			path = "unknown"
 		}
-
 		statusCodeStr := strconv.Itoa(rw.statusCode)
-
-		// TODO:
-		// 1. Observe the request duration with the Histogram.
-		//
 		httpRequestDuration.WithLabelValues(r.Method, path).Observe(duration)
-		//
-
-		// 2. Increment the request counter.
-		//
 		httpRequestsTotal.WithLabelValues(r.Method, path, statusCodeStr).Inc()
-		//
 
 	})
 }
@@ -127,20 +102,31 @@ func prometheusMiddleware(next http.Handler) http.Handler {
 func shortenHandler(w http.ResponseWriter, r *http.Request) {
 	longURL, err := io.ReadAll(r.Body)
 	if err != nil {
-		log.Printf("ERROR: couldn't read request body: %v", err)
+		// TODO: Replace log.Printf with slog.Error
+		// Old log: log.Printf("ERROR: couldn't read request body: %v", err)
+		//
+		// (Your code goes here)
+		//
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	resp, err := http.Post(backendServiceURL+"/generate", "text/plain", bytes.NewReader(longURL))
 	if err != nil {
-		log.Printf("ERROR: Backend connection failed: %v", err)
+		// TODO: Replace log.Printf with slog.Error
+		// Old log: log.Printf("ERROR: Backend connection failed: %v", err)
+		//
+		// (Your code goes here)
+		//
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
-
 	shortLink, _ := io.ReadAll(resp.Body)
-	log.Printf("INFO: Link shortened: %s -> %s", string(longURL), string(shortLink))
+	// TODO: Replace log.Printf with slog.Info
+	// Old log: log.Printf("INFO: Link shortened: %s -> %s", string(longURL), string(shortLink))
+	//
+	// (Your code goes here)
+	//
 	w.Write(shortLink)
 }
 
@@ -150,18 +136,32 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 
 	resp, err := http.Get(backendServiceURL + "/resolve/" + shortLink)
 	if err != nil {
-		log.Printf("ERROR: Backend connection failed: %v", err)
+		// TODO: Replace log.Printf with slog.Error
+		// Old log: log.Printf("ERROR: Backend connection failed: %v", err)
+		//
+		// (Your code goes here)
+		//
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
+		// TODO: Add slog.Warn
+		// (No log.Printf here, but add a WARN log)
+		// Use `logger.Warn` to log "Link not found". Add `shortLink` as an attribute.
+		//
+		// (Your code goes here)
+		//
 		http.NotFound(w, r)
 		return
 	}
 
 	longURL, _ := io.ReadAll(resp.Body)
-	log.Printf("INFO: Redirect: %s -> %s", shortLink, string(longURL))
+	// TODO: Replace log.Printf with slog.Info
+	// Old log: log.Printf("INFO: Redirect: %s -> %s", shortLink, string(longURL))
+	//
+	// (Your code goes here)
+	//
 	http.Redirect(w, r, string(longURL), http.StatusFound)
 }
 
@@ -170,27 +170,35 @@ func main() {
 	if backendServiceURL == "" {
 		backendServiceURL = "http://backend-app-svc:8081"
 	}
-	log.Printf("INFO: Backend-Service URL on: %s", backendServiceURL)
+	// TODO: Replace log.Printf with slog.Info
+	// Old log: log.Printf("INFO: Backend-Service URL on: %s", backendServiceURL)
+	//
+	// (Your code goes here)
+	//
 
 	r := mux.NewRouter()
 	r.HandleFunc("/shorten", shortenHandler).Methods("POST")
 	r.HandleFunc("/{shortlink}", redirectHandler).Methods("GET")
-	// TODO: Apply the `prometheusMiddleware` to the main router `r`.
-	//
 	r.Use(prometheusMiddleware)
-	//
 
-	// Start the /metrics server on port 9090
-	// (This part is provided for you. No changes needed.)
 	go func() {
 		metricsRouter := mux.NewRouter()
 		metricsRouter.Handle("/metrics", promhttp.Handler())
-		log.Println("INFO: Metrics server started on Port 9090")
+		// TODO: Replace log.Println with slog.Info
+		// log.Println("INFO: Metrics server started on Port 9090")
+		//
+		// (Your code goes here)
+		//
 		if err := http.ListenAndServe(":9090", metricsRouter); err != nil {
-			log.Fatalf("FATAL: Couldn't start metrics server: %v", err)
+			logger.Error("Metrics server failed", "error", err)
+			os.Exit(1)
 		}
 	}()
 
-	log.Println("INFO: Frontend-Service starting on Port 8080")
+	// TODO: Replace log.Println with slog.Info
+	// Old log: log.Println("INFO: Frontend-Service starting on Port 8080")
+	//
+	// (Your code goes here)
+	//
 	http.ListenAndServe(":8080", r)
 }
