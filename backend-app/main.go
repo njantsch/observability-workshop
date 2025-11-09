@@ -12,68 +12,130 @@ import (
 
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
-	ctx = context.Background()
-	rdb *redis.Client
-
-	logger *slog.Logger
+	ctx      = context.Background()
+	rdb      *redis.Client
+	teamName string
+	logger   *slog.Logger
+	// New OTel Tracer
+	tracer trace.Tracer
 )
 
+func init() {
+	teamName = os.Getenv("TEAM_NAME")
+	if teamName == "" {
+		teamName = "team-unknown"
+	}
+
+	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "backend-app", "team", teamName)
+
+	// TODO: Initialize OTel
+	// Call the `initTracerProvider` function (from tracing.go)
+	// to set up the OTel SDK.
+	//
+	// Also, get a global `Tracer` instance from OpenTelemetry's
+	// global provider, so we can create manual spans.
+	//
+	// (Your code here)
+	//
+}
+
 func generateHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: Create a manual Span
+	// The OTel middleware (from Task 3) will create a span for the router,
+	// but we want to *also* create a more specific span for this
+	// entire handler function.
+	//
+	// Start a new span here (e.g., "generateHandler") from the
+	// request's context.
+	//
+	// **Crucially**: Remember to end the span when the function finishes.
+	//
+	// (Your code here)
+	//
+
 	longURL, err := io.ReadAll(r.Body)
 	if err != nil {
-		// TODO: Replace log.Printf with slog.Error
-		// Old log: log.Printf("ERROR: couldn't read request body: %v", err)
-		//
-		logger.Error("Could not read request body", "error", err)
-		//
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		logger.Error("Failed to read request body", "error", err)
+		http.Error(w, "Fehlerhafter Request", http.StatusBadRequest)
 		return
 	}
 
 	shortLink := fmt.Sprintf("id%d", rand.Intn(10000))
 
-	err = rdb.Set(ctx, shortLink, string(longURL), time.Hour*24).Err()
+	// TODO: Create a manual Child Span
+	// The span for "generateHandler" is good, but we need more detail.
+	// We suspect the database call might be slow.
+	//
+	// Create a *new child span* that *only* wraps the `rdb.Set(...)` call.
+	// Give it a descriptive name (e.g., "redis-set").
+	//
+	// Also, add the "short_link" as an attribute to this new span
+	// so we can identify it in our trace.
+	//
+	// (Your code here)
+	//
+
+	// Pass the context from the *new* child span to the Redis call
+	err = rdb.Set(redisCtx, shortLink, string(longURL), time.Hour*24).Err()
+
+	// TODO: (continued)
+	// End the child span immediately after the Redis call finishes.
+	//
+	// (Your code here)
+	//
+
 	if err != nil {
-		// TODO: Replace log.Printf with slog.Error
-		// Old log: log.Printf("ERROR: Redis Set failed: %v", err)
-		//
-		logger.Error("Redis SET failed", "error", err)
-		//
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		logger.Error("Redis SET failed", "error", err, "short_link", shortLink)
+		http.Error(w, "Internal error in backend-app", http.StatusInternalServerError)
 		return
 	}
 
-	// TODO: Replace log.Printf with slog.Error
-	// Old log: log.Printf("INFO: Mapping created: %s -> %s", shortLink, string(longURL))
-	//
 	logger.Info("Mapping created", "short_link", shortLink, "long_url", string(longURL))
-	//
 	w.Write([]byte(shortLink))
 }
 
 func resolveHandler(w http.ResponseWriter, r *http.Request) {
+	// TODO: (continued)
+	// Do the same as in `generateHandler`:
+	// Start a new span that measures this entire function.
+	//
+	// (Your code here)
+	//
+
 	vars := mux.Vars(r)
 	shortLink := vars["shortlink"]
 
-	longURL, err := rdb.Get(ctx, shortLink).Result()
+	// TODO: (continued)
+	// Do the same as in `generateHandler`:
+	// Create a new child span that *only* wraps the `rdb.Get(...)` call.
+	// Give it a descriptive name (e.g., "redis-get")
+	// and add the "short_link" as an attribute.
+	//
+	// (Your code here)
+	//
+
+	longURL, err := rdb.Get(redisCtx, shortLink).Result()
+
+	// TODO: (continued)
+	// End the child span immediately after the Redis call finishes.
+	//
+	// (Your code here)
+	//
+
 	if err == redis.Nil {
-		// TODO: Replace log.Printf with slog.Error
-		// Old log: log.Printf("WARN: Link not found: %s", shortLink)
-		//
 		logger.Warn("Link not found", "short_link", shortLink)
-		//
 		http.NotFound(w, r)
 		return
 	} else if err != nil {
-		// TODO: Replace log.Printf with slog.Error
-		// Old log: log.Printf("ERROR: Redis Get failed: %v", err)
-		//
-		logger.Error("Redis GET failed", "error", err)
-		//
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		logger.Error("Redis GET failed", "error", err, "short_link", shortLink)
+		http.Error(w, "Internal error in backend-app", http.StatusInternalServerError)
 		return
 	}
 
@@ -81,16 +143,6 @@ func resolveHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-
-	// TODO:
-	// Initialize the `logger` variable (just like in the frontend)
-	// 1. Create a `slog.NewJSONHandler` (writing to `os.Stdout`).
-	// 2. Create a `slog.New` logger using this handler.
-	// 3. Add a permanent attribute: .With("service", "backend-app")
-	//
-	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "backend-app")
-	//
-
 	redisAddr := os.Getenv("REDIS_ADDR")
 	if redisAddr == "" {
 		redisAddr = "redis-svc:6379"
@@ -99,20 +151,30 @@ func main() {
 	rdb = redis.NewClient(&redis.Options{
 		Addr: redisAddr,
 	})
-	// TODO: Replace log.Printf with slog.Info
-	// Old log: log.Printf("INFO: Connecting with Redis on %s", redisAddr)
-	//
 	logger.Info("Connecting to Redis", "address", redisAddr)
-	//
 
 	r := mux.NewRouter()
+
+	// TODO: Add OTel Middleware
+	// Just like the frontend, our backend router needs to be wrapped.
+	//
+	// Apply the OTel Mux middleware here. This middleware will
+	// automatically *extract* the trace headers from the frontend's
+	// request and continue the trace.
+	//
+	// (Your code here)
+	//
+
 	r.HandleFunc("/generate", generateHandler).Methods("POST")
 	r.HandleFunc("/resolve/{shortlink}", resolveHandler).Methods("GET")
 
-	// TODO: Replace log.Printf with slog.Info
-	// Old log: log.Println("INFO: Backend-Service starting on Port 8081")
-	//
 	logger.Info("Backend service starting", "port", 8081)
+
+	// TODO: (continued)
+	// Now, tell the `http.ListenAndServe` call to use the
+	// new, trace-aware handler/middleware you just created.
 	//
-	http.ListenAndServe(":8081", r)
+	// (Your code here, modify the line below)
+	// if err := http.ListenAndServe(":8081", r); err != nil {
+	//
 }

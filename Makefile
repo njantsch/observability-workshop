@@ -31,11 +31,12 @@ BIN_DIR = bin
 FRONTEND_BIN = $(BIN_DIR)/frontend-bin
 BACKEND_BIN = $(BIN_DIR)/backend-bin
 PULL_SECRET_NAME = stackit-registry-secret
+JAEGER_CONTAINER_NAME = workshop-jaeger
 
 .PHONY: all docker-build docker-push build-push clean \
         run-local stop-local run-redis-local stop-redis-local \
         build-local run-frontend-local run-backend-local clean-local\
-		deploy create-pull-secret
+		deploy create-pull-secret stop-jaeger-local run-jaeger-local
 
 # Default target
 all: build-local
@@ -62,9 +63,25 @@ stop-redis-local:
 	@docker stop $(REDIS_CONTAINER_NAME) || true
 	@docker rm $(REDIS_CONTAINER_NAME) || true
 
+# Starts a local Jaeger container for Tracing (Lab 3)
+run-jaeger-local:
+	@echo "--- Starting local Jaeger container ($(JAEGER_CONTAINER_NAME)) ---"
+	@docker run -d --name $(JAEGER_CONTAINER_NAME) \
+		-e COLLECTOR_OTLP_ENABLED=true \
+		-p 16686:16686 \
+		-p 4318:4318 \
+		jaegertracing/all-in-one:1.53 > /dev/null || echo "Jaeger container already running or failed."
+
+# Stops and removes the local Jaeger container
+stop-jaeger-local:
+	@echo "--- Stopping local Jaeger container ($(JAEGER_CONTAINER_NAME)) ---"
+	@docker stop $(JAEGER_CONTAINER_NAME) > /dev/null 2>&1 || true
+	@docker rm $(JAEGER_CONTAINER_NAME) > /dev/null 2>&1 || true
+
 # Starts ONLY the Redis container and tells user what to do next.
-run-local: run-redis-local
-	@echo "\n--- Redis is running ---"
+run-local: run-redis-local run-jaeger-local
+	@echo "\nJaeger UI available at: http://localhost:16686"
+	@echo "--- Redis is running ---"
 	@echo "Please open TWO new terminal tabs:"
 	@echo "In Terminal 1, run: make run-backend-local"
 	@echo "In Terminal 2, run: make run-frontend-local"
@@ -84,7 +101,7 @@ run-frontend-local: build-local
 	@BACKEND_SVC_URL=http://localhost:8081 ./$(FRONTEND_BIN)
 
 # Stops ONLY the Redis container.
-stop-local: stop-redis-local
+stop-local: stop-redis-local stop-jaeger-local
 	@echo "--- Local development stopped ---"
 	@echo "If you want to clean up binaries, run 'make clean-local'"
 

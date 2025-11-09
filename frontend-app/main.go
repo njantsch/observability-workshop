@@ -12,17 +12,32 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.opentelemetry.io/contrib/instrumentation/github.com/gorilla/mux/otelmux"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 var (
 	backendServiceURL string
 	teamName          string
+	logger            *slog.Logger
+	// New OTel Tracer
+	tracer trace.Tracer
 
 	httpRequestsTotal   *prometheus.CounterVec
 	httpRequestDuration *prometheus.HistogramVec
 
-	// Define global logger
-	logger *slog.Logger
+	// TODO: Define a global OTel HTTP Client
+	// Right now, we are using Go's default HTTP client to call the backend.
+	// This default client doesn't know anything about tracing.
+	//
+	// We need to define a new, global `*http.Client` variable here.
+	// This client must be trace-aware, so it automatically sends
+	// trace information (like Trace IDs) to any service it calls.
+	//
+	// (Your code here)
+	//
 )
 
 func init() {
@@ -31,16 +46,7 @@ func init() {
 		teamName = "team-unknown"
 	}
 
-	// TODO:
-	// Initialize the `logger` variable.
-	// 1. Create a `slog.NewJSONHandler` (writing to `os.Stdout`).
-	// 2. Create a `slog.New` logger using this handler.
-	// 3. Add a permanent attribute: .With("service", "frontend-app")
-	//
-	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "frontend-app")
-	//
-
-	logger.Info("Initializing metrics...")
+	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "frontend-app", "team", teamName)
 
 	httpRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
@@ -50,7 +56,6 @@ func init() {
 		},
 		[]string{"method", "path", "code"},
 	)
-
 	httpRequestDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
 			Name:        "http_request_duration_seconds",
@@ -60,11 +65,25 @@ func init() {
 		},
 		[]string{"method", "path"},
 	)
-
-	logger.Info("Registering metrics...")
 	prometheus.MustRegister(httpRequestsTotal)
 	prometheus.MustRegister(httpRequestDuration)
-	logger.Info("Metrics successfully registered.")
+
+	// TODO: Initialize OTel
+	// Call the `initTracerProvider` function (from tracing.go)
+	// to set up the OTel SDK.
+	//
+	// Also, get a global `Tracer` instance from OpenTelemetry's
+	// global provider, so we can create manual spans later if needed.
+	//
+	// (Your code here)
+	//
+
+	// TODO: (continued)
+	// Now that the OTel SDK is initialized,
+	// create the actual instrumented HTTP client you defined globally above.
+	//
+	// (Your code here)
+	//
 }
 
 type responseWriter struct {
@@ -95,38 +114,40 @@ func prometheusMiddleware(next http.Handler) http.Handler {
 		statusCodeStr := strconv.Itoa(rw.statusCode)
 		httpRequestDuration.WithLabelValues(r.Method, path).Observe(duration)
 		httpRequestsTotal.WithLabelValues(r.Method, path, statusCodeStr).Inc()
-
 	})
 }
 
 func shortenHandler(w http.ResponseWriter, r *http.Request) {
 	longURL, err := io.ReadAll(r.Body)
 	if err != nil {
-		// TODO: Replace log.Printf with slog.Error
-		// Old log: log.Printf("ERROR: couldn't read request body: %v", err)
-		//
-		logger.Error("Could not read request body", "error", err)
-		//
-		http.Error(w, "Invalid request body", http.StatusBadRequest)
+		logger.Error("Failed to read request body", "error", err)
+		http.Error(w, "Fehlerhafter Request", http.StatusBadRequest)
 		return
 	}
 
-	resp, err := http.Post(backendServiceURL+"/generate", "text/plain", bytes.NewReader(longURL))
+	// TODO: Use the OTel HTTP Client
+	// Replace the default `http.Post` call below.
+	//
+	// Use your new, trace-aware http-client to send this request
+	// to the backend.
+	//
+	// **Crucially**: You must pass the `context` from the incoming
+	// request (`r`) to the *new* outgoing request. This is the "magic"
+	// that connects the two services in a single trace.
+	//
+	// (Your code here, replace the line below)
+	// resp, err := http.Post(backendServiceURL+"/generate", "text/plain", bytes.NewBuffer(longURL))
+	//
+
 	if err != nil {
-		// TODO: Replace log.Printf with slog.Error
-		// Old log: log.Printf("ERROR: Backend connection failed: %v", err)
-		//
-		logger.Error("Could not read request body", "error", err)
-		//
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		logger.Error("Backend call failed", "error", err)
+		http.Error(w, "Internal error in frontend-app", http.StatusInternalServerError)
 		return
 	}
+	defer resp.Body.Close()
 	shortLink, _ := io.ReadAll(resp.Body)
-	// TODO: Replace log.Printf with slog.Info
-	// Old log: log.Printf("INFO: Link shortened: %s -> %s", string(longURL), string(shortLink))
-	//
+
 	logger.Info("Link shortened", "long_url", string(longURL), "short_link", string(shortLink))
-	//
 	w.Write(shortLink)
 }
 
@@ -134,34 +155,33 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	shortLink := vars["shortlink"]
 
-	resp, err := http.Get(backendServiceURL + "/resolve/" + shortLink)
+	// TODO: (continued)
+	// Do the same as in `shortenHandler`.
+	//
+	// Replace the default `http.Get` call below with a call
+	// using your `otelHttpClient`.
+	//
+	// Remember to pass the `context` from the incoming request (`r`)
+	// to the new outgoing request.
+	//
+	// (Your code here, replace the line below)
+	// resp, err := http.Get(backendServiceURL + "/resolve/" + shortLink)
+	//
+
 	if err != nil {
-		// TODO: Replace log.Printf with slog.Error
-		// Old log: log.Printf("ERROR: Backend connection failed: %v", err)
-		//
 		logger.Error("Backend call failed", "error", err)
-		//
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		http.Error(w, "Internal error in frontend-app", http.StatusInternalServerError)
 		return
 	}
-
+	defer resp.Body.Close()
 	if resp.StatusCode == http.StatusNotFound {
-		// TODO: Add slog.Warn
-		// (No log.Printf here, but add a WARN log)
-		// Use `logger.Warn` to log "Link not found". Add `shortLink` as an attribute.
-		//
 		logger.Warn("Link not found", "short_link", shortLink)
-		//
 		http.NotFound(w, r)
 		return
 	}
-
 	longURL, _ := io.ReadAll(resp.Body)
-	// TODO: Replace log.Printf with slog.Info
-	// Old log: log.Printf("INFO: Redirect: %s -> %s", shortLink, string(longURL))
-	//
+
 	logger.Info("Redirecting link", "short_link", shortLink, "long_url", string(longURL))
-	//
 	http.Redirect(w, r, string(longURL), http.StatusFound)
 }
 
@@ -170,13 +190,20 @@ func main() {
 	if backendServiceURL == "" {
 		backendServiceURL = "http://backend-app-svc:8081"
 	}
-	// TODO: Replace log.Printf with slog.Info
-	// Old log: log.Printf("INFO: Backend-Service URL on: %s", backendServiceURL)
-	//
 	logger.Info("Backend service URL", "url", backendServiceURL)
-	//
 
 	r := mux.NewRouter()
+
+	// TODO: Add OTel Middleware
+	// Our router `r` is "dumb" and doesn't know about traces.
+	//
+	// We need to apply a middleware to the router that
+	// automatically creates a new trace span for every
+	// incoming request.
+	//
+	// (Your code here)
+	//
+
 	r.HandleFunc("/shorten", shortenHandler).Methods("POST")
 	r.HandleFunc("/{shortlink}", redirectHandler).Methods("GET")
 	r.Use(prometheusMiddleware)
@@ -184,21 +211,19 @@ func main() {
 	go func() {
 		metricsRouter := mux.NewRouter()
 		metricsRouter.Handle("/metrics", promhttp.Handler())
-		// TODO: Replace log.Println with slog.Info
-		// log.Println("INFO: Metrics server started on Port 9090")
-		//
 		logger.Info("Metrics server starting", "port", 9090)
-		//
 		if err := http.ListenAndServe(":9090", metricsRouter); err != nil {
-			logger.Error("Metrics server failed", "error", err)
-			os.Exit(1)
+			logger.Error("Metrics server failed to start", "error", err)
 		}
 	}()
 
-	// TODO: Replace log.Println with slog.Info
-	// Old log: log.Println("INFO: Frontend-Service starting on Port 8080")
-	//
 	logger.Info("Frontend service starting", "port", 8080)
+
+	// TODO: (continued)
+	// Now, tell the `http.ListenAndServe` call to use the
+	// new, trace-aware handler/middleware you just created.
 	//
-	http.ListenAndServe(":8080", r)
+	// (Your code here, modify the line below)
+	// if err := http.ListenAndServe(":8080", r); err != nil {
+	//
 }
