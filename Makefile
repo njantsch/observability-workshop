@@ -150,11 +150,19 @@ delete-pull-secret:
 	@kubectl --context $(K8S_CONTEXT) delete secret $(PULL_SECRET_NAME) --ignore-not-found=true
 
 # Deploys the applications to Kubernetes using the REGISTRY_URL.
-deploy: create-pull-secret
+deploy: create-pull-secret deploy-prometheus
 	@echo "--- Deploying to Kubernetes context: $(K8S_CONTEXT) ---"
 	@sed -e "s|__REGISTRY_URL__|$(REGISTRY_URL)|g" deploy/kubernetes.yaml | kubectl --context $(K8S_CONTEXT) apply -f -
 
+deploy-prometheus:
+	@echo "--- Deploying Prometheus ---"
+	@kubectl --context $(K8S_CONTEXT) apply -f deploy/lab-1/
+
+undeploy-prometheus:
+	@echo "--- Deleting Prometheus ---"
+	@kubectl --context $(K8S_CONTEXT) delete -f deploy/lab-1/ || true
+
 # Deletes the applications from Kubernetes
-undeploy: delete-pull-secret
+undeploy: delete-pull-secret undeploy-prometheus
 	@echo "--- Deleting setup from Kubernetes context: $(K8S_CONTEXT) ---"
 	@sed -e "s|__REGISTRY_URL__|$(REGISTRY_URL)|g" deploy/kubernetes.yaml | kubectl --context $(K8S_CONTEXT) delete -f -

@@ -16,7 +16,6 @@ import (
 
 var (
 	backendServiceURL string
-	teamName          string
 
 	// Define metric variables globally
 	httpRequestsTotal   *prometheus.CounterVec
@@ -24,17 +23,12 @@ var (
 )
 
 func init() {
-	teamName = os.Getenv("TEAM_NAME")
-	if teamName == "" {
-		teamName = "team-unknown"
-	}
-	log.Printf("INFO: Initializing metrics for team: %s", teamName)
+	log.Printf("INFO: Initializing metrics")
 
 	// TODO:
 	// Create the `httpRequestsTotal` CounterVec.
 	// - Name: "http_requests_total"
 	// - Help: "Total number of HTTP requests."
-	// - ConstLabels: prometheus.Labels{"team": teamName}
 	// - Labels: "method", "path", "code"
 	//
 	// (Your code goes here)
@@ -42,7 +36,6 @@ func init() {
 	// Create the `httpRequestDuration` HistogramVec.
 	// - Name: "http_request_duration_seconds"
 	// - Help: "HTTP request duration in seconds."
-	// - ConstLabels: prometheus.Labels{"team": teamName}
 	// - Labels: "method", "path"
 	//
 	// (Your code goes here)
