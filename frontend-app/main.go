@@ -20,7 +20,6 @@ import (
 
 var (
 	backendServiceURL string
-	teamName          string
 	logger            *slog.Logger
 	// New OTel Tracer
 	tracer trace.Tracer
@@ -41,27 +40,21 @@ var (
 )
 
 func init() {
-	teamName = os.Getenv("TEAM_NAME")
-	if teamName == "" {
-		teamName = "team-unknown"
-	}
 
-	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "frontend-app", "team", teamName)
+	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "frontend-app")
 
 	httpRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name:        "http_requests_total",
-			Help:        "Total number of HTTP requests.",
-			ConstLabels: prometheus.Labels{"team": teamName},
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests.",
 		},
 		[]string{"method", "path", "code"},
 	)
 	httpRequestDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:        "http_request_duration_seconds",
-			Help:        "HTTP request duration in seconds.",
-			Buckets:     prometheus.DefBuckets,
-			ConstLabels: prometheus.Labels{"team": teamName},
+			Name:    "http_request_duration_seconds",
+			Help:    "HTTP request duration in seconds.",
+			Buckets: prometheus.DefBuckets,
 		},
 		[]string{"method", "path"},
 	)
@@ -193,6 +186,8 @@ func main() {
 	logger.Info("Backend service URL", "url", backendServiceURL)
 
 	r := mux.NewRouter()
+	r.HandleFunc("/shorten", shortenHandler).Methods("POST")
+	r.HandleFunc("/{shortlink}", redirectHandler).Methods("GET")
 
 	// TODO: Add OTel Middleware
 	// Our router `r` is "dumb" and doesn't know about traces.
@@ -204,8 +199,6 @@ func main() {
 	// (Your code here)
 	//
 
-	r.HandleFunc("/shorten", shortenHandler).Methods("POST")
-	r.HandleFunc("/{shortlink}", redirectHandler).Methods("GET")
 	r.Use(prometheusMiddleware)
 
 	go func() {
@@ -219,11 +212,7 @@ func main() {
 
 	logger.Info("Frontend service starting", "port", 8080)
 
-	// TODO: (continued)
-	// Now, tell the `http.ListenAndServe` call to use the
-	// new, trace-aware handler/middleware you just created.
-	//
-	// (Your code here, modify the line below)
-	// if err := http.ListenAndServe(":8080", r); err != nil {
-	//
+	if err := http.ListenAndServe(":8080", r); err != nil {
+		logger.Error("Frontend server failed to start", "error", err)
+	}
 }

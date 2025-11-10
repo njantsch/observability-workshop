@@ -58,6 +58,9 @@ spec:
         image: __REGISTRY_URL__/backend-app:latest
         ports:
         - containerPort: 8081
+        env:
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: otel-collector-svc:4318
 ---
 apiVersion: v1
 kind: Service
@@ -100,3 +103,6 @@ spec:
         - containerPort: 8080
         - containerPort: 9090
           name: metrics
+        env:
+        - name: OTEL_EXPORTER_OTLP_ENDPOINT
+          value: otel-collector-svc:4318

@@ -19,21 +19,16 @@ import (
 )
 
 var (
-	ctx      = context.Background()
-	rdb      *redis.Client
-	teamName string
-	logger   *slog.Logger
+	ctx    = context.Background()
+	rdb    *redis.Client
+	logger *slog.Logger
 	// New OTel Tracer
 	tracer trace.Tracer
 )
 
 func init() {
-	teamName = os.Getenv("TEAM_NAME")
-	if teamName == "" {
-		teamName = "team-unknown"
-	}
 
-	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "backend-app", "team", teamName)
+	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil)).With("service", "backend-app")
 
 	// TODO: Initialize OTel
 	// Call the `initTracerProvider` function (from tracing.go)
@@ -154,6 +149,8 @@ func main() {
 	logger.Info("Connecting to Redis", "address", redisAddr)
 
 	r := mux.NewRouter()
+	r.HandleFunc("/generate", generateHandler).Methods("POST")
+	r.HandleFunc("/resolve/{shortlink}", resolveHandler).Methods("GET")
 
 	// TODO: Add OTel Middleware
 	// Just like the frontend, our backend router needs to be wrapped.
@@ -165,16 +162,9 @@ func main() {
 	// (Your code here)
 	//
 
-	r.HandleFunc("/generate", generateHandler).Methods("POST")
-	r.HandleFunc("/resolve/{shortlink}", resolveHandler).Methods("GET")
-
 	logger.Info("Backend service starting", "port", 8081)
 
-	// TODO: (continued)
-	// Now, tell the `http.ListenAndServe` call to use the
-	// new, trace-aware handler/middleware you just created.
-	//
-	// (Your code here, modify the line below)
-	// if err := http.ListenAndServe(":8081", r); err != nil {
-	//
+	if err := http.ListenAndServe(":8081", r); err != nil {
+		logger.Error("Backend server failed to start", "error", err)
+	}
 }
