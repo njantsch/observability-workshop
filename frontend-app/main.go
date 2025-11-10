@@ -35,7 +35,7 @@ var (
 	// This client must be trace-aware, so it automatically sends
 	// trace information (like Trace IDs) to any service it calls.
 	//
-	// (Your code here)
+	otelHttpClient *http.Client
 	//
 )
 
@@ -69,13 +69,19 @@ func init() {
 	// global provider, so we can create manual spans later if needed.
 	//
 	// (Your code here)
+	if _, err := initTracerProvider(logger); err != nil {
+		logger.Error("Failed to initialize OTel TracerProvider", "error", err)
+	}
+	tracer = otel.Tracer("frontend-app-tracer")
 	//
-
 	// TODO: (continued)
 	// Now that the OTel SDK is initialized,
 	// create the actual instrumented HTTP client you defined globally above.
 	//
 	// (Your code here)
+	otelHttpClient = &http.Client{
+		Transport: otelhttp.NewTransport(http.DefaultTransport),
+	}
 	//
 }
 
@@ -130,6 +136,14 @@ func shortenHandler(w http.ResponseWriter, r *http.Request) {
 	//
 	// (Your code here, replace the line below)
 	// resp, err := http.Post(backendServiceURL+"/generate", "text/plain", bytes.NewBuffer(longURL))
+	ctx := r.Context()
+	req, err := http.NewRequestWithContext(ctx, "POST", backendServiceURL+"/generate", bytes.NewBuffer(longURL))
+	if err != nil {
+		logger.Error("Failed to create backend request", "error", err)
+		http.Error(w, "Internal error in frontend-app", http.StatusInternalServerError)
+		return
+	}
+	resp, err := otelHttpClient.Do(req)
 	//
 
 	if err != nil {
@@ -159,6 +173,14 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 	//
 	// (Your code here, replace the line below)
 	// resp, err := http.Get(backendServiceURL + "/resolve/" + shortLink)
+	ctx := r.Context()
+	req, err := http.NewRequestWithContext(ctx, "GET", backendServiceURL+"/resolve/"+shortLink, nil)
+	if err != nil {
+		logger.Error("Failed to create backend request", "error", err)
+		http.Error(w, "Internal error in frontend-app", http.StatusInternalServerError)
+		return
+	}
+	resp, err := otelHttpClient.Do(req)
 	//
 
 	if err != nil {
@@ -197,6 +219,7 @@ func main() {
 	// incoming request.
 	//
 	// (Your code here)
+	r.Use(otelmux.Middleware("frontend-router"))
 	//
 
 	r.Use(prometheusMiddleware)

@@ -37,7 +37,10 @@ func init() {
 	// Also, get a global `Tracer` instance from OpenTelemetry's
 	// global provider, so we can create manual spans.
 	//
-	// (Your code here)
+	if _, err := initTracerProvider(logger); err != nil {
+		logger.Error("Failed to initialize OTel TracerProvider", "error", err)
+	}
+	tracer = otel.Tracer("backend-app-tracer")
 	//
 }
 
@@ -52,7 +55,9 @@ func generateHandler(w http.ResponseWriter, r *http.Request) {
 	//
 	// **Crucially**: Remember to end the span when the function finishes.
 	//
-	// (Your code here)
+	ctx := r.Context()
+	ctx, span := tracer.Start(ctx, "generateHandler")
+	defer span.End()
 	//
 
 	longURL, err := io.ReadAll(r.Body)
@@ -74,7 +79,11 @@ func generateHandler(w http.ResponseWriter, r *http.Request) {
 	// Also, add the "short_link" as an attribute to this new span
 	// so we can identify it in our trace.
 	//
-	// (Your code here)
+	redisCtx, redisSpan := tracer.Start(ctx, "redis-set")
+	redisSpan.SetAttributes(
+		attribute.String("db.system", "redis"),
+		attribute.String("db.key", shortLink),
+	)
 	//
 
 	// Pass the context from the *new* child span to the Redis call
@@ -83,7 +92,7 @@ func generateHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: (continued)
 	// End the child span immediately after the Redis call finishes.
 	//
-	// (Your code here)
+	redisSpan.End()
 	//
 
 	if err != nil {
@@ -101,7 +110,9 @@ func resolveHandler(w http.ResponseWriter, r *http.Request) {
 	// Do the same as in `generateHandler`:
 	// Start a new span that measures this entire function.
 	//
-	// (Your code here)
+	ctx := r.Context()
+	ctx, span := tracer.Start(ctx, "resolveHandler")
+	defer span.End()
 	//
 
 	vars := mux.Vars(r)
@@ -113,7 +124,11 @@ func resolveHandler(w http.ResponseWriter, r *http.Request) {
 	// Give it a descriptive name (e.g., "redis-get")
 	// and add the "short_link" as an attribute.
 	//
-	// (Your code here)
+	redisCtx, redisSpan := tracer.Start(ctx, "redis-get")
+	redisSpan.SetAttributes(
+		attribute.String("db.system", "redis"),
+		attribute.String("db.key", shortLink),
+	)
 	//
 
 	longURL, err := rdb.Get(redisCtx, shortLink).Result()
@@ -121,7 +136,7 @@ func resolveHandler(w http.ResponseWriter, r *http.Request) {
 	// TODO: (continued)
 	// End the child span immediately after the Redis call finishes.
 	//
-	// (Your code here)
+	redisSpan.End()
 	//
 
 	if err == redis.Nil {
@@ -159,7 +174,7 @@ func main() {
 	// automatically *extract* the trace headers from the frontend's
 	// request and continue the trace.
 	//
-	// (Your code here)
+	r.Use(otelmux.Middleware("backend-router"))
 	//
 
 	logger.Info("Backend service starting", "port", 8081)
