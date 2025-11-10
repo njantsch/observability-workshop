@@ -33,9 +33,8 @@ func init() {
 	//
 	httpRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name:        "http_requests_total",
-			Help:        "Total number of HTTP requests.",
-			ConstLabels: prometheus.Labels{"team": teamName},
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests.",
 		},
 		[]string{"method", "path", "code"},
 	)
@@ -47,10 +46,9 @@ func init() {
 	//
 	httpRequestDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:        "http_request_duration_seconds",
-			Help:        "HTTP request duration in seconds.",
-			Buckets:     prometheus.DefBuckets,
-			ConstLabels: prometheus.Labels{"team": teamName},
+			Name:    "http_request_duration_seconds",
+			Help:    "HTTP request duration in seconds.",
+			Buckets: prometheus.DefBuckets,
 		},
 		[]string{"method", "path"},
 	)
