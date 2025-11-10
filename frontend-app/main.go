@@ -16,7 +16,6 @@ import (
 
 var (
 	backendServiceURL string
-	teamName          string
 
 	httpRequestsTotal   *prometheus.CounterVec
 	httpRequestDuration *prometheus.HistogramVec
@@ -26,11 +25,6 @@ var (
 )
 
 func init() {
-	teamName = os.Getenv("TEAM_NAME")
-	if teamName == "" {
-		teamName = "team-unknown"
-	}
-
 	// TODO:
 	// Initialize the `logger` variable.
 	// 1. Create a `slog.NewJSONHandler` (writing to `os.Stdout`).
@@ -44,19 +38,17 @@ func init() {
 
 	httpRequestsTotal = prometheus.NewCounterVec(
 		prometheus.CounterOpts{
-			Name:        "http_requests_total",
-			Help:        "Total number of HTTP requests.",
-			ConstLabels: prometheus.Labels{"team": teamName},
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests.",
 		},
 		[]string{"method", "path", "code"},
 	)
 
 	httpRequestDuration = prometheus.NewHistogramVec(
 		prometheus.HistogramOpts{
-			Name:        "http_request_duration_seconds",
-			Help:        "HTTP request duration in seconds.",
-			Buckets:     prometheus.DefBuckets,
-			ConstLabels: prometheus.Labels{"team": teamName},
+			Name:    "http_request_duration_seconds",
+			Help:    "HTTP request duration in seconds.",
+			Buckets: prometheus.DefBuckets,
 		},
 		[]string{"method", "path"},
 	)
