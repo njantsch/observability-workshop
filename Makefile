@@ -102,7 +102,7 @@ docker-build:
 	@echo "--- Building Docker images ---"
 	@for app in $(APPS); do \
 		echo "--> Building $$app (./$$app)"; \
-		docker build -t $(REGISTRY_URL)/$$app:$(TAG) ./$$app; \
+		docker build --platform linux/amd64 -t $(REGISTRY_URL)/$$app:$(TAG) ./$$app; \
 	done
 	@echo "--- Build complete ---"
 
