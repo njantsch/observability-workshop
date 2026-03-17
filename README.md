@@ -15,89 +15,55 @@ The application is a simple "Link Shortener" built as two microservices and a da
 - **redis**: A simple Redis database used to store the mapping between short links and long URLs.
 
 
-### 2. Prerequisites
+### 2. Prerequisites & Environment Setup
 
-Before you begin, please ensure you have the following tools installed on your machine:
+To avoid "it works on my machine" issues, this workshop uses **DevContainers**. 
+- **For VScode**:
+    1. Ensure you have Docker and [VS Code](https://code.visualstudio.com/) installed.
+    2. Install the `Dev Containers` extension in VS Code.
+    3. Open this repository in VS Code.
+    4. When prompted in the bottom right corner, click **"Reopen in Container"**. 
+- **For GoLand**:
+    1. Open the project locally in GoLand
+    2. GoLand will automatically detect the `.devcontainer/devcontainer.json` file.
+    3. Open the devcontainer.json file in the editor.
+    4. Click the Dev Container icon (a blue container icon) in the left-hand gutter next to the code.
+    5. Select **"Create Dev Container and Mount Sources"**
 
-- **Project**: Access to the observability-workshop project in the STACKIT portal.
-- **Container Registry**: Access to the obs-workshop project in the STACKIT Container Registry.
-- **Git**: To clone this repository.
-- **Go**: (Version 1.21+) To build and run the apps locally.
-- **Docker**: To run the local Redis database and to build container images.
-- **kubectl**: To deploy the application to Kubernetes (SKE).
+*This will automatically install Go, Docker, `kubectl`, and `kind` inside your development environment.*
 
-### 3. Workshop Flow
+### 3. Running the Application
 
-We have two ways to run the application: locally for fast development and on Kubernetes for the kubernetes environment.
+We use a local Kubernetes cluster (`kind`) to simulate a production-like environment for our telemetry data.
 
-**A. Local Development**
+#### Start the Cluster
+To provision your local cluster, run:
+```bash
+make cluster-up
+```
 
-During the labs, you'll need to change code often. To test your changes quickly without building and deploying a Docker image every time, you can run the entire application stack locally.
+#### Build and Deploy
+To build the Docker images, load them into the local cluster, and deploy the application manifests, run:
+```bash
+make deploy
+```
+Wait a few moments for the pods to start (kubectl get pods).
 
-1. Start the Local Environment:
-First, start the Redis database.
+#### Test the App
+Since the application is running inside the `kind` cluster, we need to port-forward the frontend service to access it from our browser:
+```bash
+kubectl port-forward svc/frontend-app-svc 8080:80
+```
+Open a new terminal to test the app:
+1. **Create a short link:**
+`curl -X POST -d 'https://stackit.com' http://localhost:8080/shorten`
+*(Output example: "id2861")*
+2. **Test the redirect:**
+Open your browser and navigate to `http://localhost:8080/id2861` (replace with your ID). You should be redirected to stackit.com!
 
-- `make run-local`
-
-
-This command starts the redis container and will wait for your next instructions.
-
-2. Start the Backend:
-
-- `make run-backend-local`
-
-
-This command will build the backend-app (if needed) and run it in the foreground.
-
-3. Start the Frontend:
-Open a new terminal window or tab.
-
-- `make run-frontend-local`
-
-
-This command will build the frontend-app (if needed) and run it in the foreground.
-
-4. Test Your Local App:
-Open a fourth terminal (or use the first one) to test the app:
-Create a new short link
-`curl -X POST -d 'https://stackit.de' http://localhost:8080/shorten`
-Output: e.g., "id2861" (Your ID will be random)
-Open the Browser and connect to `http://localhost:8080/id2861`
-Or use curl via `curl -L http://localhost:8080/id2861`
-This should redirect you to [https://stackit.de](https://stackit.de)
-
-
-You should now see the log output for this request appear live in your backend and frontend terminals.
-
-5. Stop the Local Environment:
-
-- `make stop-local`
-
-To clean up the compiled binaries, you can run make clean-local.
-
-**B. "Production" Workflow (Kubernetes / SKE)**
-
-This is the workflow for deploying your finished, instrumented application to your SKE cluster.
-
-1. Log in to the STACKIT Container Registry:
-
-- `make docker-login`
-
-
-2. Build and Push the Images:
-This command builds the Docker images for both frontend-app and backend-app, tags them, and pushes them to your registry.
-
-- `make build-push`
-
-
-3. Deploy to SKE:
-This command applies the Kubernetes manifests from the deploy/ directory. It dynamically replaces the __REGISTRY_URL__ placeholder in the kubernetes.yaml with the value from your Makefile.
-It also prompts you to enter your registry credentials which will be then used to create a docker-pull-secret in your kubernetes cluster.
-
-- `make deploy`
-
-
-After a minute, your app will be running in SKE and accessible via a LoadBalancer Service.
+#### Cleanup
+To remove the application from Kubernetes: `make undeploy`
+To shut down the entire local cluster: `make cluster-down`
 
 ### 4. The Workshop Labs
 
@@ -110,26 +76,3 @@ Implement Logging (Loki): Convert the simple text logs to structured (JSON) logs
 Implement Tracing (OpenTelemetry): Add distributed tracing to follow a single request as it jumps from the frontend-app to the backend-app and the database, allowing us to pinpoint bottlenecks.
 
 Build a Unified Dashboard: Combine all our new data sources (App Metrics, SKE Platform Metrics, Logs, Traces) into a single SRE dashboard in STACKIT Grafana.
-
-### 5. Makefile Quick Reference
-
-#### Local Development
-
-- `make run-local`: Starts the local Redis container (Docker).
-- `make run-backend-local`: (Run in new terminal) Builds and runs the backend app in the foreground.
-- `make run-frontend-local`: (Run in new terminal) Builds and runs the frontend app in the foreground.
-- `make stop-local`: Stops and removes the local Redis container. (Stop apps with Ctrl+C).
-- `make build-local`: Builds the local Go binaries (places them in /bin).
-- `make clean-local`: Deletes the local Go binaries and temp directories.
-- `make clean`: Convenience target to stop redis and clean binaries.
-
-#### Kubernetes (SKE) Deployment
-
-- `make docker-login`: Logs you into the STACKIT container registry.
-- `make docker-build`: Builds all container images.
-- `make docker-push`: Pushes all container images to your registry.
-- `make build-push`: Runs docker-build then docker-push.
-- `make create-pull-secret`: Creates the registry secret in your cluster, prompting if needed.
-- `make deploy`: Deploys the application to your currently configured Kubernetes cluster.
-- `make undeploy`: Deletes the application from your cluster
-- `make delete-pull-secret`: Removes the pull secret and patch from your cluster.

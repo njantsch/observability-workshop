@@ -1,6 +1,6 @@
 module github.com/njantsch/observability-workshop/backend
 
-go 1.21
+go 1.23.0
 
 require (
 	github.com/go-redis/redis/v8 v8.11.5

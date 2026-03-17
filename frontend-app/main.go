@@ -29,7 +29,7 @@ func shortenHandler(w http.ResponseWriter, r *http.Request) {
 
 	shortLink, _ := io.ReadAll(resp.Body)
 	log.Printf("INFO: Link shortened: %s -> %s", string(longURL), string(shortLink))
-	w.Write(shortLink)
+	w.Write(append(shortLink, '\n'))
 }
 
 func redirectHandler(w http.ResponseWriter, r *http.Request) {
