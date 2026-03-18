@@ -75,4 +75,4 @@ Implement Logging (Loki): Convert the simple text logs to structured (JSON) logs
 
 Implement Tracing (OpenTelemetry): Add distributed tracing to follow a single request as it jumps from the frontend-app to the backend-app and the database, allowing us to pinpoint bottlenecks.
 
-Build a Unified Dashboard: Combine all our new data sources (App Metrics, SKE Platform Metrics, Logs, Traces) into a single SRE dashboard in STACKIT Grafana.
+Build a Unified Dashboard: Combine all our new data sources (App Metrics, Logs, Traces) into a single SRE dashboard in STACKIT Grafana.
