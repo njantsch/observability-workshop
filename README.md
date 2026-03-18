@@ -1,135 +1,46 @@
-# STACKIT Observability Workshop: The "Link Shortener" App
-Welcome to the STACKIT Observability Workshop! This repository contains the sample application we will be instrumenting today.
+# Lab 3: Distributed Tracing with OpenTelemetry
 
-The goal of this workshop is to take a "black box" application and make it fully observable by implementing the "Three Pillars of Observability": Metrics, Logs, and Traces.
+## Objective
+In this final lab, we implement **Distributed Tracing**. Traces allow us to track a single user request as it travels across the network from the frontend, into the backend, and finally to the database. We will use the OpenTelemetry (OTel) SDK.
 
-### 1. Application Architecture
+Our apps will push their spans to an OpenTelemetry Collector running in our cluster. The collector will then forward all trace data to our STACKIT Observability Tempo instance.
 
-The application is a simple "Link Shortener" built as two microservices and a database:
-- **frontend-app (Go)**: The public-facing API that handles user requests.
-    - `POST` /shorten: Takes a long URL and asks the backend to generate a short link.
-    - `GET` /{shortlink}: Asks the backend for the long URL and performs a redirect.
-- **backend-app (Go)**: The internal service that handles the "business logic".
-    - `POST` /generate: Generates a random short ID.
-    - `GET` /resolve/{id}: Looks up the ID.
-- **redis**: A simple Redis database used to store the mapping between short links and long URLs.
+## Helpful Resources
+* **[OpenTelemetry Go Documentation](https://opentelemetry.io/docs/languages/go/)**: Review how to initialize the SDK and instrument HTTP clients/routers.
+* **[OTel Go Contrib Libraries](https://github.com/open-telemetry/opentelemetry-go-contrib)**: We will use the `net/http/otelhttp` and `gorilla/mux/otelmux` packages from here.
 
+## Prerequisites
+1. Ensure your `devcontainer` and `kind` cluster are running (`make cluster-up`).
+2. Make sure your credentials are set in `deploy/lab-1` and `deploy/lab-2`.
+3. Configure your STACKIT Observability Trace Push credentials in `deploy/lab-3/otel-collector.yaml`. Replace the placeholders (`<YOUR_OBSERVABILITY_OTEL_HTTP_URL>`, `<YOUR_BASE64_ENCODED_OBSERVABILITY_USER_AND_PASSWORD>`).
 
-### 2. Prerequisites
+## Tasks
 
-Before you begin, please ensure you have the following tools installed on your machine:
+### Task 1: Initialize the SDK and Middleware (Frontend & Backend)
+* **Goal**: Call `initTracerProvider(logger)` (which is provided for you in `tracing.go`) in the `init()` functions of both apps.
+* **Goal**: Wrap the Gorilla Mux routers in both applications with `otelmux.Middleware`. This automatically extracts incoming trace headers and creates the parent span.
 
-- **Project**: Access to the observability-workshop project in the STACKIT portal.
-- **Container Registry**: Access to the obs-workshop project in the STACKIT Container Registry.
-- **Git**: To clone this repository.
-- **Go**: (Version 1.21+) To build and run the apps locally.
-- **Docker**: To run the local Redis database and to build container images.
-- **kubectl**: To deploy the application to Kubernetes (SKE).
+### Task 2: Instrument the HTTP Client (Frontend)
+Go's default `http.Get` and `http.Post` calls do not propagate trace contexts.
+* **Goal**: Create a custom `*http.Client` that uses `otelhttp.NewTransport`. 
+* **Goal**: Rewrite the backend calls in `frontend-app` to use http requests with context and execute them via your custom client. **Passing the request context is critical for linking the traces!**
 
-### 3. Workshop Flow
+### Task 3: Create Manual Spans (Backend)
+The middleware tracks the HTTP request, but what if the database is slow? 
+* **Goal**: Create manual child spans specifically around your `rdb.Set` and `rdb.Get` Redis calls. Add the Redis key as a span attribute. Don't forget to end them!
 
-We have two ways to run the application: locally for fast development and on Kubernetes for the kubernetes environment.
+## Verification
 
-**A. Local Development**
+1. **Deploy your changes:**
+   Run `make deploy` to build your code, load it into the cluster, and deploy all manifests including the OTel Collector.
+2. **Generate Traffic:**
+   Port-forward the frontend app:
+   `kubectl port-forward svc/frontend-app-svc 8080:80`
+   Generate some data: `curl -X POST -d 'https://stackit.de' http://localhost:8080/shorten`
+3. **Verify Local Traces (Optional):**
+   If you want to test traces locally without Kubernetes, you can run `make local-run`, which starts a local Jaeger instance at `http://localhost:16686`.
+4. **Verify Remote Traces:**
+   Log into your STACKIT Grafana instance, go to Explore, select your Tempo data source, and query for your traces. You should see a beautiful waterfall chart visualizing the hop from Frontend -> Backend -> Redis!
 
-During the labs, you'll need to change code often. To test your changes quickly without building and deploying a Docker image every time, you can run the entire application stack locally.
-
-1. Start the Local Environment:
-First, start the Redis database.
-
-- `make run-local`
-
-
-This command starts the redis container and will wait for your next instructions.
-
-2. Start the Backend:
-
-- `make run-backend-local`
-
-
-This command will build the backend-app (if needed) and run it in the foreground.
-
-3. Start the Frontend:
-Open a new terminal window or tab.
-
-- `make run-frontend-local`
-
-
-This command will build the frontend-app (if needed) and run it in the foreground.
-
-4. Test Your Local App:
-Open a fourth terminal (or use the first one) to test the app:
-Create a new short link
-`curl -X POST -d 'https://stackit.de' http://localhost:8080/shorten`
-Output: e.g., "id2861" (Your ID will be random)
-Open the Browser and connect to `http://localhost:8080/id2861`
-Or use curl via `curl -L http://localhost:8080/id2861`
-This should redirect you to [https://stackit.de](https://stackit.de)
-
-
-You should now see the log output for this request appear live in your backend and frontend terminals.
-
-5. Stop the Local Environment:
-
-- `make stop-local`
-
-To clean up the compiled binaries, you can run make clean-local.
-
-**B. "Production" Workflow (Kubernetes / SKE)**
-
-This is the workflow for deploying your finished, instrumented application to your SKE cluster.
-
-1. Log in to the STACKIT Container Registry:
-
-- `make docker-login`
-
-
-2. Build and Push the Images:
-This command builds the Docker images for both frontend-app and backend-app, tags them, and pushes them to your registry.
-
-- `make build-push`
-
-
-3. Deploy to SKE:
-This command applies the Kubernetes manifests from the deploy/ directory. It dynamically replaces the __REGISTRY_URL__ placeholder in the kubernetes.yaml with the value from your Makefile.
-It also prompts you to enter your registry credentials which will be then used to create a docker-pull-secret in your kubernetes cluster.
-
-- `make deploy`
-
-
-After a minute, your app will be running in SKE and accessible via a LoadBalancer Service.
-
-### 4. The Workshop Labs
-
-Throughout this workshop, we will take this "un-instrumented" application and...
-
-Implement Metrics (Prometheus): Add custom metrics (Counters and Histograms) to the Go code to measure request rates, errors, and latencies.
-
-Implement Logging (Loki): Convert the simple text logs to structured (JSON) logs to make them searchable and more powerful.
-
-Implement Tracing (OpenTelemetry): Add distributed tracing to follow a single request as it jumps from the frontend-app to the backend-app and the database, allowing us to pinpoint bottlenecks.
-
-Build a Unified Dashboard: Combine all our new data sources (App Metrics, SKE Platform Metrics, Logs, Traces) into a single SRE dashboard in STACKIT Grafana.
-
-### 5. Makefile Quick Reference
-
-#### Local Development
-
-- `make run-local`: Starts the local Redis container (Docker).
-- `make run-backend-local`: (Run in new terminal) Builds and runs the backend app in the foreground.
-- `make run-frontend-local`: (Run in new terminal) Builds and runs the frontend app in the foreground.
-- `make stop-local`: Stops and removes the local Redis container. (Stop apps with Ctrl+C).
-- `make build-local`: Builds the local Go binaries (places them in /bin).
-- `make clean-local`: Deletes the local Go binaries and temp directories.
-- `make clean`: Convenience target to stop redis and clean binaries.
-
-#### Kubernetes (SKE) Deployment
-
-- `make docker-login`: Logs you into the STACKIT container registry.
-- `make docker-build`: Builds all container images.
-- `make docker-push`: Pushes all container images to your registry.
-- `make build-push`: Runs docker-build then docker-push.
-- `make create-pull-secret`: Creates the registry secret in your cluster, prompting if needed.
-- `make deploy`: Deploys the application to your currently configured Kubernetes cluster.
-- `make undeploy`: Deletes the application from your cluster
-- `make delete-pull-secret`: Removes the pull secret and patch from your cluster.
+---
+*Got hopelessly stuck? Ask the person on your left or ask the person on your right. But if everything fails, simply run `git checkout lab-3-solution` to see the completed implementation.*
