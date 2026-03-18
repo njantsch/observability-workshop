@@ -48,3 +48,4 @@ Find the `prometheusMiddleware` function. This function intercepts every HTTP re
 
 ---
 *Got hopelessly stuck? Ask the person on your left or ask the person on your right. But if everything fails, simply run `git checkout lab-1-solution` to see the completed implementation.*
+
