@@ -55,7 +55,8 @@ spec:
     spec:
       containers:
       - name: backend-app
-        image: __REGISTRY_URL__/backend-app:latest
+        image: obs-workshop/backend-app:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8081
 ---
@@ -95,7 +96,8 @@ spec:
     spec:
       containers:
       - name: frontend-app
-        image: __REGISTRY_URL__/frontend-app:latest
+        image: obs-workshop/frontend-app:latest
+        imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 8080
         - containerPort: 9090

@@ -119,7 +119,7 @@ func shortenHandler(w http.ResponseWriter, r *http.Request) {
 	//
 	logger.Info("Link shortened", "long_url", string(longURL), "short_link", string(shortLink))
 	//
-	w.Write(shortLink)
+	w.Write(append(shortLink, '\n'))
 }
 
 func redirectHandler(w http.ResponseWriter, r *http.Request) {
