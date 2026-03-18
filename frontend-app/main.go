@@ -39,6 +39,7 @@ func init() {
 		[]string{"method", "path", "code"},
 	)
 
+	// TODO:
 	// Create the `httpRequestDuration` HistogramVec.
 	// - Name: "http_request_duration_seconds"
 	// - Help: "HTTP request duration in seconds."
@@ -89,7 +90,7 @@ func prometheusMiddleware(next http.Handler) http.Handler {
 		// Call the next handler in the chain
 		next.ServeHTTP(rw, r)
 
-		//Record metrics after the request has been handled
+		// Record metrics after the request has been handled
 		duration := time.Since(start).Seconds()
 
 		// Get the route (e.g., "/shorten" or "/{shortlink}")
@@ -102,12 +103,12 @@ func prometheusMiddleware(next http.Handler) http.Handler {
 		statusCodeStr := strconv.Itoa(rw.statusCode)
 
 		// TODO:
-		// 1. Observe the request duration with the Histogram.
+		// 1. Observe the request duration with the Histogram (with labels).
 		//
 		httpRequestDuration.WithLabelValues(r.Method, path).Observe(duration)
 		//
 
-		// 2. Increment the request counter.
+		// 2. Increment the request counter (with labels).
 		//
 		httpRequestsTotal.WithLabelValues(r.Method, path, statusCodeStr).Inc()
 		//
@@ -132,7 +133,7 @@ func shortenHandler(w http.ResponseWriter, r *http.Request) {
 
 	shortLink, _ := io.ReadAll(resp.Body)
 	log.Printf("INFO: Link shortened: %s -> %s", string(longURL), string(shortLink))
-	w.Write(shortLink)
+	w.Write(append(shortLink, '\n'))
 }
 
 func redirectHandler(w http.ResponseWriter, r *http.Request) {
