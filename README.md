@@ -22,7 +22,7 @@ Open `frontend-app/main.go` and `backend-app/main.go` and look for the `TODO:` b
 * **Goal**: Instead of using the default global logger, create a new `slog.Logger` instance that writes JSON to `os.Stdout`. Add a default attribute indicating the service name (e.g., `service=frontend-app` or `service=backend-app`).
 
 ### Task 2: Implement Structured Logs
-* **Goal**: Go through both files and replace all the old `log.Printf` and `log.Println` calls with the equivalent `logger.Info()`, `logger.Warn()`, and `logger.Error()` calls.
+* **Goal**: Go through both files and replace all the old `log.Printf` and `log.Println` calls with the equivalent `Info`, `Warn`, and `Error` calls.
 
 ## Verification
 
