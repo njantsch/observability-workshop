@@ -31,13 +31,7 @@ func init() {
 	// - Help: "Total number of HTTP requests."
 	// - Labels: "method", "path", "code"
 	//
-	httpRequestsTotal = prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: "http_requests_total",
-			Help: "Total number of HTTP requests.",
-		},
-		[]string{"method", "path", "code"},
-	)
+	// Code goes here ...
 
 	// TODO:
 	// Create the `httpRequestDuration` HistogramVec.
@@ -45,21 +39,13 @@ func init() {
 	// - Help: "HTTP request duration in seconds."
 	// - Labels: "method", "path"
 	//
-	httpRequestDuration = prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    "http_request_duration_seconds",
-			Help:    "HTTP request duration in seconds.",
-			Buckets: prometheus.DefBuckets,
-		},
-		[]string{"method", "path"},
-	)
+	// Code goes here ...
 
 	log.Println("INFO: Registering metrics...")
 	// TODO:
 	// Register both metrics with Prometheus.
 	//
-	prometheus.MustRegister(httpRequestsTotal)
-	prometheus.MustRegister(httpRequestDuration)
+	// Code goes here ...
 	//
 	log.Println("INFO: Metrics successfully registered.")
 }
@@ -105,12 +91,12 @@ func prometheusMiddleware(next http.Handler) http.Handler {
 		// TODO:
 		// 1. Observe the request duration with the Histogram (with labels).
 		//
-		httpRequestDuration.WithLabelValues(r.Method, path).Observe(duration)
+		// Code goes here ...
 		//
 
 		// 2. Increment the request counter (with labels).
 		//
-		httpRequestsTotal.WithLabelValues(r.Method, path, statusCodeStr).Inc()
+		// Code goes here ...
 		//
 
 	})
@@ -169,7 +155,7 @@ func main() {
 	r.HandleFunc("/{shortlink}", redirectHandler).Methods("GET")
 	// TODO: Apply the `prometheusMiddleware` to the main router `r`.
 	//
-	r.Use(prometheusMiddleware)
+	// Code goes here ...
 	//
 
 	// Start the /metrics server on port 9090
