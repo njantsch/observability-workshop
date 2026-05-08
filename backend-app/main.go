@@ -58,7 +58,7 @@ func generateHandler(w http.ResponseWriter, r *http.Request) {
 	longURL, err := io.ReadAll(r.Body)
 	if err != nil {
 		logger.Error("Failed to read request body", "error", err)
-		http.Error(w, "Fehlerhafter Request", http.StatusBadRequest)
+		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
