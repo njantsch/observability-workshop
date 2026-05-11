@@ -1,4 +1,4 @@
-# STACKIT Observability Workshop: The "Link Shortener" App
+# STACKIT Observability Workshop
 Welcome to the STACKIT Observability Workshop! This repository contains the sample application we will be instrumenting today.
 
 The goal of this workshop is to take a "black box" application and make it fully observable by implementing the "Three Pillars of Observability": Metrics, Logs, and Traces.
