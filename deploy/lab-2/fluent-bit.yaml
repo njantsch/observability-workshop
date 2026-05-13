@@ -79,7 +79,7 @@ data:
     [INPUT]
       Name              tail
       Path              /var/log/containers/*.log
-      Parser            docker
+      Parser            cri
       Tag               kube.*
       Mem_Buf_Limit     5MB
       Skip_Long_Lines   On
