@@ -71,7 +71,7 @@ metadata:
 data:
   prometheus.yml: |
     global:
-      scrape_interval: 15s
+      scrape_interval: 5s
 
     remote_write:
       - url: "<YOUR_REMOTE_WRITE_PUSH_URL>"
@@ -84,6 +84,5 @@ data:
 
     scrape_configs:
       - job_name: "frontend-app"
-        scrape_interval: 60s
         static_configs:
         - targets: ["frontend-app-svc:9090"]
