@@ -11,9 +11,8 @@ Before you begin, you may want to keep the following documentation open. You wil
 * **[Prometheus Documentation - Metric Types](https://prometheus.io/docs/concepts/metric_types/)**: To understand the difference between Counters and Histograms.
 
 ## Prerequisites
-1. Ensure you have your `devcontainer` running.
-2. Start your local cluster: `make cluster-up`
-3. Configure your STACKIT Observability Push credentials in `deploy/lab-1/prometheus.yaml`. Replace the placeholders (`<YOUR_REMOTE_WRITE_PUSH_URL>`, `<YOUR_OBSERVABILITY_API_USERNAME>`, `<YOUR_OBSERVABILITY_API_PASSWORD>`) with your credentials.
+1. Start your local cluster: `make cluster-up`
+2. Configure your STACKIT Observability Push credentials in `deploy/lab-1/prometheus.yaml`. Replace the placeholders (`<YOUR_REMOTE_WRITE_PUSH_URL>`, `<YOUR_OBSERVABILITY_API_USERNAME>`, `<YOUR_OBSERVABILITY_API_PASSWORD>`) with your credentials.
 
 ## Tasks
 
