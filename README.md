@@ -17,20 +17,10 @@ The application is a simple "Link Shortener" built as two microservices and a da
 
 ### 2. Prerequisites & Environment Setup
 
-To avoid "it works on my machine" issues, this workshop uses **DevContainers**. 
-- **For VScode**:
-    1. Ensure you have Docker and [VS Code](https://code.visualstudio.com/) installed.
-    2. Install the `Dev Containers` extension in VS Code.
-    3. Open this repository in VS Code.
-    4. When prompted in the bottom right corner, click **"Reopen in Container"**. 
-- **For GoLand**:
-    1. Open the project locally in GoLand
-    2. GoLand will automatically detect the `.devcontainer/devcontainer.json` file.
-    3. Open the devcontainer.json file in the editor.
-    4. Click the Dev Container icon (a blue container icon) in the left-hand gutter next to the code.
-    5. Select **"Create Dev Container and Mount Sources"**
+1. Ensure you have Docker and your favorite IDE installed.
+2. Install `go` with version `>=1.23` via `brew install go`
+3. Install `kind` via `brew install kind` or `go install sigs.k8s.io/kind@v0.33.0`
 
-*This will automatically install Go, Docker, `kubectl`, and `kind` inside your development environment.*
 
 ### 3. Running the Application
 
