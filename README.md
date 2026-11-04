@@ -10,7 +10,7 @@ Our apps will push their spans to an OpenTelemetry Collector running in our clus
 * **[OTel Go Contrib Libraries](https://github.com/open-telemetry/opentelemetry-go-contrib)**: We will use the `net/http/otelhttp` and `gorilla/mux/otelmux` packages from here.
 
 ## Prerequisites
-1. Ensure your `devcontainer` and `kind` cluster are running (`make cluster-up`).
+1. Start your local cluster: `make cluster-up`
 2. Make sure your credentials are set in `deploy/lab-1` and `deploy/lab-2`.
 3. Configure your STACKIT Observability Trace Push credentials in `deploy/lab-3/otel-collector.yaml`. Replace the placeholders (`<YOUR_OBSERVABILITY_OTEL_HTTP_URL>`, `<YOUR_BASE64_ENCODED_OBSERVABILITY_USER_AND_PASSWORD>`).
 
