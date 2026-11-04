@@ -9,7 +9,7 @@ Once our apps output JSON to standard out, a Fluent-Bit agent (running as a Daem
 * **[A Guide to the Go slog Package](https://go.dev/blog/slog)**: Learn how to initialize a JSON logger and pass contextual attributes.
 
 ## Prerequisites
-1. Ensure your `devcontainer` and `kind` cluster are running (`make cluster-up`).
+1. Start your local cluster: `make cluster-up`
 2. Make sure your Prometheus credentials set in `deploy/lab-1/prometheus.yaml`.
 3. Configure your STACKIT Observability Log Push credentials in `deploy/lab-2/fluent-bit.yaml`. 
    Replace the placeholders (`<PUSH_URL_DOMAIN>`, `<YOUR_INSTANCE_ID>`, `<YOUR_OBSERVABILITY_API_USERNAME>`, `<YOUR_OBSERVABILITY_API_PASSWORD>`) in the `[OUTPUT]` block.
