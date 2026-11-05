@@ -5,6 +5,7 @@
 CLUSTER_NAME = obs-workshop
 APPS = frontend-app backend-app
 TAG = latest
+K8S_CONTEXT = kind-$(CLUSTER_NAME)
 
 .PHONY: cluster-up cluster-down build-apps load-apps deploy undeploy local-run local-stop clean
 
@@ -46,17 +47,17 @@ load-apps: build-apps
 
 deploy: load-apps
 	@echo "Deploying to Kubernetes..."
-	@kubectl apply -f deploy/kubernetes.yaml
+	@kubectl apply -f deploy/kubernetes.yaml --context=$(K8S_CONTEXT)
 	@echo "Deploying Prometheus..."
-	@kubectl apply -f deploy/lab-1/
+	@kubectl apply -f deploy/lab-1/ --context=$(K8S_CONTEXT)
 	@echo "Deploying Fluent-Bit..."
-	@kubectl apply -f deploy/lab-2/
+	@kubectl apply -f deploy/lab-2/ --context=$(K8S_CONTEXT)
 	@echo "Applications deployed. Run 'kubectl get pods' to check status."
 
 undeploy:
 	@echo "Removing from Kubernetes..."
-	@kubectl delete -f deploy/kubernetes.yaml --ignore-not-found=true
-	@kubectl delete -f deploy/lab-1/ --ignore-not-found=true
-	@kubectl delete -f deploy/lab-2/ --ignore-not-found=true
+	@kubectl delete -f deploy/kubernetes.yaml --ignore-not-found=true --context=$(K8S_CONTEXT)
+	@kubectl delete -f deploy/lab-1/ --ignore-not-found=true --context=$(K8S_CONTEXT)
+	@kubectl delete -f deploy/lab-2/ --ignore-not-found=true --context=$(K8S_CONTEXT)
 
 clean: local-stop cluster-down
