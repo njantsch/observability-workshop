@@ -36,7 +36,7 @@ Open `frontend-app/main.go` and `backend-app/main.go` and look for the `TODO:` b
    `kubectl port-forward svc/frontend-app-svc 8080:80`
    Generate some data: `curl -X POST -d 'https://stackit.de' http://localhost:8080/shorten`
 4. **Verify Remote Logs:**
-   Log into your STACKIT Grafana instance, go to Explore, and query `{job="fluentbit"}`. You should see your JSON logs arriving and fully parsed!
+   Log into your STACKIT Grafana instance, go to Explore, and query `{kubernetes_labels_app="frontend-app"}` or `{kubernetes_labels_app="backend-app"}`. You should see your JSON logs arriving and fully parsed!
 
 ---
 *Got hopelessly stuck? Ask the person on your left or ask the person on your right. But if everything fails, simply run `git checkout lab-2-solution` to see the completed implementation.*
