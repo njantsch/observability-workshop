@@ -106,7 +106,7 @@ data:
       TLS   On
       Retry_Limit 5
       Labels job=fluentbit
-      Label_Keys $kubernetes['namespace_name'],$kubernetes['pod_name']
+      Label_Keys $kubernetes['namespace_name'],$kubernetes['pod_name'], $kubernetes['labels']['app']
 
   parsers.conf: |
     [PARSER]
